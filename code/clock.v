@@ -1,0 +1,246 @@
+module clock(
+	clk, 
+	rst,
+	rst_sw,
+	stop,
+	in_sw,
+	lcd_rs,
+	lcd_rw,
+	lcd_e,
+	lcd_data,
+	led);
+	
+	
+	input					clk, rst;
+   input    [4:0]		in_sw;
+	input					rst_sw;
+	input					stop;
+   output				lcd_rs;			//rs = 0 => command, rs = 1 =>data 
+	output				lcd_rw;			//rw = 0 => write, rs = 1 => read 
+	output				lcd_e;			//enable
+	output	[7:0]		lcd_data;
+	output				led;
+	
+	wire					clk, rstn;
+   wire		[4:0]		in_sw;
+   wire					ampm;
+	wire		[4:0]		hour;
+	wire		[5:0]		min, sec;
+	wire		[13:0]	year;
+	wire		[3:0]		month;
+	wire		[4:0]		day;
+	wire		[2:0]		week;
+	wire					rst_sw;
+	wire					stop;
+	
+	assign	rstn	=	~rst;
+	
+    // for watch and date module
+	wire            en_day;
+   wire            en_1hz;
+   wire		[16:0]  bin_watch;
+   wire		[22:0]  bin_date;
+   wire		[4:0]   max_date;
+
+    // for debouncer
+   wire		[4:0]		sw;
+	wire					debclk_10hz;
+
+    // for fsm
+	wire		[6:0]		en_state; 
+	wire		[4:0]		cursor;
+
+		
+	// for alarm
+	wire 		[7:0]		save_hour, save_min, save_sec;
+	wire 		[15:0]	save_year;
+	wire 		[7:0]		save_mon, save_day;
+	wire					led;
+	
+	 //stopwatch
+	wire		[7:0]		bcd_stop_hour;
+	wire		[7:0]		bcd_stop_min;
+	wire		[7:0]		bcd_stop_sec;
+	wire					en_stop;
+	 
+	 
+	 //timer
+	wire		[7:0]		timer_hour, timer_min, timer_sec;
+	wire		[4:0]		bin_timer_hour;
+	wire		[5:0]		bin_timer_min;
+	wire 		[5:0]		bin_timer_sec;
+	wire					en_timer;
+
+	 
+	en_clk_time				EN_TIME (
+		/* input					*/ .clk				(clk),
+		/* input					*/ .rst				(rstn),
+		/* output				*/ .en_1clk			(en_1hz),
+		/* output				*/ .debclk_10hz	(debclk_10hz),
+		/* output				*/ .en_clk			(en_stop));
+	 
+	stopwatch				STOP (
+		/* input					*/ .clk				(clk),
+		/* input					*/ .rst				(rstn),
+		/* input					*/ .en_stop			(en_stop),
+		/* input		[4:0]		*/ .sw				(sw),
+		/* intput				*/ .set_stop		(en_state[4]),
+		/* output				*/ .bcd_stop_hour	(bcd_stop_hour),
+		/* output				*/ .bcd_stop_min	(bcd_stop_min),
+		/* output				*/ .bcd_stop_sec	(bcd_stop_sec));
+
+	fsm						FSM (
+		/* input					*/ .clk				(clk),
+		/* input					*/ .rst				(rstn),
+		/* input		[4:0]		*/ .sw				(sw),
+		/* output	[2:0]		*/ .en_state		(en_state),
+		/* output	[2:0]		*/ .cursor			(cursor));
+
+	watch_time				TIME (
+		/* input					*/ .clk				(clk),
+		/* input					*/ .rst				(rstn),
+		/* input					*/ .en_1hz			(en_1hz),
+		/* input					*/ .set_watch		(en_state[1]),
+		/* input					*/ .ampm_sw			(sw[0]),
+		/* input		[16:0]	*/ .bin_watch		(bin_watch),
+		/* output				*/ .ampm				(ampm),
+		/* output	[4:0]		*/ .hour				(hour),
+		/* output	[5:0]		*/ .min				(min),
+		/* output	[5:0]		*/ .sec				(sec),
+		/* output				*/ .en_day			(en_day));
+
+	watch_date						DATE (
+		/* input					*/ .clk				(clk),
+		/* input					*/ .rst				(rstn),
+		/* input					*/ .en_day			(en_day),
+		/* input					*/ .set_date		(en_state[2]),
+		/* input		[22:0]	*/ .bin_date		(bin_date),
+		/* output	[4:0]		*/ .max_date		(max_date),
+		/* output	[13:0]	*/ .year				(year),
+		/* output	[3:0]		*/ .month			(month),
+		/* output	[4:0]		*/ .day				(day),
+		/* output	[2:0]		*/ .week				(week)
+		);
+
+	debouncer_control		DEB (
+		/* input					*/ .clk				(clk),
+		/* input					*/ .rst				(rstn),
+		/* input					*/ .debclk_10hz	(debclk_10hz),
+		/* input		[4:0]		*/ .in_sw			(in_sw),
+		/* output	[4:0]		*/ .sw				(sw)
+	);
+
+	converter				CON (
+		/* input					*/ .clk				(clk),
+		/* input					*/ .rst				(rstn),
+		/* input		[2:0]		*/ .en_state		(en_state),
+		/* input		[4:0]		*/ .sw				(sw),
+		/* input		[2:0]		*/ .cursor			(cursor),
+		/* input		[4:0]		*/ .hour				(hour),
+		/* input		[5:0]		*/ .min				(min), .sec(sec),
+		/* input		[13:0]	*/ .year				(year),
+		/* input		[3:0]		*/ .month			(month),
+		/* input		[4:0]		*/ .day				(day),
+		/* input		[4:0]		*/ .max_date		(max_date),
+		/* output	[16:0]	*/ .bin_watch		(bin_watch),
+		/* output	[22:0]	*/ .bin_date		(bin_date),
+		/* output	[7:0]		*/ .save_hour		(save_hour),
+		/* output	[7:0]		*/ .save_min		(save_min),
+		/* output	[7:0]		*/ .save_sec		(save_sec),
+		/* output	[15:0]	*/ .save_year		(save_year),
+		/* output	[7:0]		*/ .save_mon		(save_mon),
+		/* output	[7:0]		*/ .save_day		(save_day),
+		/* output	[7:0]		*/ .timer_hour		(timer_hour),
+		/* output	[7:0]		*/	.timer_min		(timer_min),
+		/* output	[7:0]		*/	.timer_sec		(timer_sec)
+	);
+	alarm						ALARM	(
+		/* input					*/	.clk				(clk),
+		/* input					*/	.rst				(rstn),
+		/* input					*/	.rst_sw			(rst_sw),
+		/* input		[7:0]		*/ .save_hour		(save_hour),
+		/* input		[7:0]		*/ .save_min		(save_min),
+		/* input		[7:0]		*/ .save_sec		(save_sec),
+		/* input		[15:0]	*/ .save_year		(save_year),
+		/* input		[7:0]		*/ .save_mon		(save_mon),
+		/* input		[7:0]		*/ .save_day		(save_day),
+		/* input		[16:0]	*/ .bin_watch		(bin_watch),
+		/*	output	LED		*/ .led				(led)
+	);
+	timer						TIMER	(
+		/*	input					*/	.clk				(clk),
+		/* input					*/	.rst				(rstn),
+		/* input					*/	.en_1clk			(en_1hz),
+		/* input					*/	.set_timer		(en_state[5]),
+		/* input		[7:0]		*/ .timer_hour		(timer_hour),
+		/* input		[7:0]		*/ .timer_min		(timer_min),
+		/* input		[7:0]		*/ .timer_sec		(timer_sec),
+		/* input					*/	.stop				(stop),
+		/* output	[7:0]		*/ .bin_timer_hour(bin_timer_hour),
+		/* output	[7:0]		*/ .bin_timer_min	(bin_timer_min),
+		/* output	[7:0]		*/ .bin_timer_sec	(bin_timer_sec),			
+	);
+	
+	
+	 //for lcd
+	 
+	wire		[7:0]		data_char;
+	wire		[4:0]		index_char;
+	wire					en_clk1;
+	 
+	 
+	en_clk_lcd				EN_LCD (
+		/*	input					*/	.clk				(clk),
+		/*	input					*/	.rst				(rstn),
+		/*	output				*/	.en_clk1			(en_clk1)
+	);
+		
+	lcd_display_string	STR(
+		/*input					*/	.clk				(clk),
+		/*input					*/	.rst				(rstn),
+		/*input					*/	.index			(index_char),
+		/*input					*/	.hour				(hour), 
+		/*input					*/	.min				(min), 
+		/*input					*/ .sec				(sec),
+		/*input					*/ .ampm				(ampm),
+		/*input					*/	.year				(year),
+		/*input					*/ .month			(month),
+		/*input					*/ .day				(day),
+		/*input					*/ .week				(week),
+		/* input					*/ .en_watch		(en_state[0]),
+		/* input					*/ .set_watch		(en_state[1]),
+		/* input					*/ .set_date		(en_state[2]),
+		/* input					*/ .set_alarm		(en_state[3]),
+		/* input					*/ .stop_watch		(en_state[4]),
+		/* input					*/ .set_timer		(en_state[5]),
+		/* input		[16:0]	*/ .bin_watch		(bin_watch),
+		/* input		[22:0]	*/ .bin_date		(bin_date),
+		/* input		[7:0]		*/ .save_hour		(save_hour),
+		/* input		[7:0]		*/ .save_min		(save_min),
+		/* input		[7:0]		*/ .save_sec		(save_sec),
+		/* input		[15:0]	*/ .save_year		(save_year),
+		/* input		[7:0]		*/ .save_mon		(save_mon),
+		/* input		[7:0]		*/	.save_day		(save_day),
+		/* input		[7:0]		*/ .bin_timer_hour(bin_timer_hour),
+		/* input		[7:0]		*/ .bin_timer_min	(bin_timer_min),
+		/* input		[7:0]		*/ .bin_timer_sec	(bin_timer_sec),	 
+		/* input		[15:0]	*/ .bcd_stop_hour	(bcd_stop_hour),
+		/* input		[15:0]	*/ .bcd_stop_min	(bcd_stop_min),
+		/* input		[15:0]	*/ .bcd_stop_sec	(bcd_stop_sec),
+		/*output					*/	.out				(data_char)
+		);
+		
+	lcd_driver				DRV (
+		/*input					*/	.clk				(clk),
+		/*input					*/	.rst				(rstn),
+		/*input					*/	.en_clk			(en_clk1),
+		/*input					*/	.data_char		(data_char),
+		/*output					*/	.index_char		(index_char),
+		/*output					*/	.lcd_rs			(lcd_rs),
+		/*output					*/	.lcd_rw			(lcd_rw),
+		/*output					*/	.lcd_e			(lcd_e),
+		/*output					*/	.lcd_data		(lcd_data)
+	);
+	
+  
+endmodule 
