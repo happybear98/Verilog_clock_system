@@ -1,0 +1,46 @@
+/* 디바운스 모듈 집합 */
+
+module debouncer_control(
+	input	wire			clk, rst,
+	input	wire			debclk_10hz,		// 10 Hz clock
+	input	wire	[4:0]	in_sw,				// push 스위치 입력
+	output	wire	[4:0]	sw					// 스위치 출력
+	);
+
+
+	debouncer_clk				SW0 (
+	/*	input				*/	.clk			(clk),
+	/*	input				*/	.rst			(rst),				// 반전된 rstn 사용 
+	/*	input				*/	.in				(in_sw[0]),		 	// 스위치 입력
+	/* 	input				*/	.debclk			(debclk_10hz),		// 10Hz for debouncer SW
+	/* 	output				*/	.out			(sw[0]));		
+
+	debouncer_clk				SW1 (
+	/*	input				*/	.clk			(clk),
+	/*	input				*/	.rst			(rst),				// 반전된 rstn 사용 
+	/*	input				*/	.in				(in_sw[1]),			// 스위치 입력
+	/* 	input				*/	.debclk			(debclk_10hz),		// 10Hz for debouncer SW
+	/* 	output				*/	.out			(sw[1]));	
+	
+	debouncer_clk				SW2 (
+	/*	input				*/	.clk			(clk),
+	/*	input				*/	.rst			(rst),				// 반전된 rstn 사용 
+	/*	input				*/	.in				(in_sw[2]),			// 스위치 입력
+	/* 	input				*/	.debclk			(debclk_10hz),		// 10Hz for debouncer SW
+	/* 	output				*/	.out			(sw[2]));		
+	
+	debouncer_clk				SW3 (
+	/*	input				*/	.clk			(clk),
+	/*	input				*/	.rst			(rst),				// 반전된 rstn 사용 
+	/*	input				*/	.in				(in_sw[3]),			// 스위치 입력
+	/* 	input				*/	.debclk			(debclk_10hz),		// 10Hz for debouncer SW
+	/* 	output				*/	.out			(sw[3]));	
+	
+	debouncer_clk				SW4 (
+	/*	input				*/	.clk			(clk),
+	/*	input				*/	.rst			(rst),				// 반전된 rstn 사용 
+	/*	input				*/	.in				(in_sw[4]),			// 스위치 입력
+	/* 	input				*/	.debclk			(debclk_10hz),		// 10Hz for debouncer SW
+	/* 	output				*/	.out			(sw[4]));
+		
+endmodule

@@ -1,0 +1,26 @@
+module d_ff (
+	clk,			// 클록 
+	rst, 			// 리셋
+	set, 			// 셋
+	d, 				// D-FF의 입력 d
+	q, 				// D-FF의 출력 q
+	qb);			// D-FF의 반전 출력
+	
+	input 		clk, rst, set;
+	input		d;
+	output		q, qb;
+	
+	reg			q;
+	
+	assign		qb = ~q;
+	
+	always @ (posedge clk or negedge rst or negedge set) begin
+		if(!rst)				// 리셋(CLRN) 동작
+			q	<= 0;
+		else if (!set)			// 프리셋(PRN) 동작
+			q	<= 1;
+		else
+			q	<= d;
+	end
+	
+endmodule
